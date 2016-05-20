@@ -1,0 +1,6 @@
+---
+MYSQL_SRC_URL_BASE: "http://dev.mysql.com/get/Downloads/MySQL-5.7"
+MYSQL_SRC_FILE: "mysql-boost-5.7.12.tar.gz"
+MYSQL_WORK_DIR: "mysql-5.7.12"
+MYSQL_SRC_MD5: "fb9d67b708e5e9d29533c5be2768b41e"
+WORK_DIR: "/home/vagrant/build/mysql"

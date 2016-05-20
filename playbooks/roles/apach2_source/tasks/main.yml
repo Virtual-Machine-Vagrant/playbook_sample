@@ -1,0 +1,105 @@
+- name: Include vars
+  include_vars: "main.yml"
+
+- name: "Create work directory"
+  file: path={{ APACHE_BASE_DIR }}
+        state=directory
+
+- name: "Check Apache2.4 Source"
+  stat: path={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}.tar.gz
+  register: apache_src
+
+- name: "Get Apache2.4 Source"
+  get_url: url={{ APACHE_SRC_URL_BASE }}/{{ APACHE_WORK_DIR }}.tar.gz
+           dest={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}.tar.gz
+  when: not (apache_src.stat.isreg is defined and apache_src.stat.isreg)
+
+- name: "Check Apache Source dir"
+  stat: path={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}
+  register: apache_src_dir
+
+- name: "Unarchive Source"
+  unarchive: src={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}.tar.gz
+             dest={{ APACHE_BASE_DIR }}
+             copy=no
+  when: not (apache_src_dir.stat.isdir is defined and apache_src_dir.stat.isdir)
+
+- name: "Check Makefile"
+  stat: path={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}/Makefile
+  register: ap_makefile
+
+- name: "Configure"
+  shell: >
+    ./configure --enable-so > 00.log;
+  args:
+    chdir: "{{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}"
+  when: not (ap_makefile.stat.isreg is defined and ap_makefile.stat.isreg)
+
+- name: "Check built binary"
+  stat: path={{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}/httpd
+  register: httpd_built
+
+- name: "make"
+  shell: >
+    make > 01.log;
+  args:
+    chdir: "{{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}"
+  when: not (httpd_built.stat.isreg is defined and httpd_built.stat.isreg)
+
+- name: "Check httpd binary"
+  stat: path=/usr/local/apache2/bin/httpd
+  register: httpd_bin
+
+- name: "make install"
+  become: yes
+  shell: >
+    make install > 02.log;
+  args:
+    chdir: "{{ APACHE_BASE_DIR }}/{{ APACHE_WORK_DIR }}"
+  when: not (httpd_bin.stat.isreg is defined and httpd_bin.stat.isreg)
+
+- name: "Create Apache Group"
+  become: yes
+  group: name=apache
+         gid=10001
+
+- name: "Create MySQL User"
+  become: yes
+  user: name=apache
+        uid=10001
+        group=apache
+
+- name: "Check httpd init.d file" 
+  become: yes
+  stat: path=/etc/init.d/httpd
+  register: initd_httpd
+
+- name: "Copy httpd init.d file"
+  become: yes
+  file: src=/usr/local/apache2/bin/apachectl
+        dest=/etc/init.d/httpd
+        state=link
+  when: not (initd_httpd.stat.islnk is defined and initd_httpd.stat.islnk)
+
+- name: "Check httpd rc3.d file" 
+  become: yes
+  stat: path=/etc/rc3.d/S50httpd
+  register: rc3d_httpd
+
+- name: "Create symlink: httpd init.d file"
+  become: yes
+  shell: >
+    update-rc.d -f httpd defaults 50 50;
+  when: not (rc3d_httpd.stat.islnk is defined and rc3d_httpd.stat.islnk)    
+
+#- name: "Create symlink: httpd init.d file"
+#  become: yes
+#  file: src=/etc/init.d/httpd
+#        dest=/etc/rc3.d/S50httpd
+#        state=link
+#  when: not (rc3d_httpd.stat.islnk is defined and rc3d_httpd.stat.islnk)
+        
+- name: "Launch httpd server"
+  become: yes
+  service: name=httpd
+           state=restarted

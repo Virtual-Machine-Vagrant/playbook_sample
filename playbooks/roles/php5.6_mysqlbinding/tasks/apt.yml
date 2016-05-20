@@ -1,0 +1,7 @@
+- name: "APT: install php5.6 and apache2"
+  become: yes
+  apt: pkg=php5-mysql force=yes
+
+- name: "apache: service restart"
+  become: yes
+  service: name=apache2 state=restarted

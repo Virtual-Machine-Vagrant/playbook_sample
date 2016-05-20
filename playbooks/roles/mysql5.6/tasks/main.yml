@@ -1,0 +1,10 @@
+# install mysql5.6 (with apt)
+- name: "check Linux distlibution(Ubuntu/Debian)"
+  include: apt.yml
+  when: ansible_distribution == "Ubuntu" or ansible_distribution == "Debian"
+
+# install mysql5.6 (with yum)
+- name: "check Linux distlibution(CentOS/RedHat)"
+  include: yum.yml
+  when: ansible_distribution == "CentOS" or ansible_distribution == "RedHat"
+

@@ -1,0 +1,10 @@
+# install mysql php binding and restart apache2 and PHP (with apt)
+- name: "check Linux distlibution(Ubuntu/Debian)"
+  include: apt.yml
+  when: ansible_distribution == "Ubuntu" or ansible_distribution == "Debian"
+
+# install mysql php binding and restart apache2 (with yum)
+- name: "check Linux distlibution(CentOS/RedHat)"
+  include: yum.yml
+  when: ansible_distribution == "CentOS" or ansible_distribution == "RedHat"
+

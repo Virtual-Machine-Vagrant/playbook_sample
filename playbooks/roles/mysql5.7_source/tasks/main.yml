@@ -1,0 +1,156 @@
+# install mysql5.7
+- name: Include vars
+  include_vars: "main.yml"
+
+- name: "APT: install applications for building MySQL"
+  become: yes
+  apt: pkg={{ item }} state=present
+  with_items:
+    - libapr1
+    - libapr1-dev
+    - libaprutil1
+    - libaprutil1-dev
+    - cmake
+    - libncurses5-dev
+    - bison
+    - build-essential
+
+- name: "Create work directory"
+  file: path={{ WORK_DIR }}
+        state=directory
+
+- name: "Check MySQL Source"
+  stat: path={{ WORK_DIR }}/{{ MYSQL_SRC_FILE }}
+  register: mysql_src
+
+- name: "Check MySQL Source dir"
+  stat: path={{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}
+  register: src_dir
+
+- name: "Get MySQL Source"
+  get_url: url={{ MYSQL_SRC_URL_BASE }}/{{ MYSQL_SRC_FILE }}
+           dest={{ WORK_DIR }}/{{ MYSQL_SRC_FILE }}
+  when: not (mysql_src.stat.isreg is defined and mysql_src.stat.isreg)
+
+- name: "unarchive MySQL Source"
+  unarchive: src={{ WORK_DIR }}/{{ MYSQL_SRC_FILE }}
+             dest={{ WORK_DIR }}
+             copy=no
+  when: not (src_dir.stat.isdir is defined and src_dir.stat.isdir)
+
+- name: "remove cache file"
+  file: path={{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}/CMakeCache.txt
+        state=absent
+        force=yes
+
+- name: "Check Makefile"
+  stat: path={{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}/Makefile
+  register: makefile
+
+- name: "cmake"
+  shell: >
+    cmake . -DENABLE_DOWNLOADS=1 -DWITH_BOOST=boost/boost_1_59_0 > 00.log;
+  args:
+    chdir: "{{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}"
+  when: not (makefile.stat.isreg is defined and makefile.stat.isreg)
+
+- name: "Check built binary"
+  stat: path={{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}/sql/mysqld
+  register: mysqld
+
+- name: "make"
+  shell: >
+    make > 01.log;
+  args:
+    chdir: "{{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}"
+  when: not (mysqld.stat.isreg is defined and mysqld.stat.isreg)
+
+- name: "Check mysqld binary"
+  stat: path=/usr/local/mysql/bin/mysqld
+  register: mysqld_bin
+
+- name: "make install"
+  become: yes
+  shell: >
+    make install > 02.log;
+  args:
+    chdir: "{{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}"
+  when: not (mysqld_bin.stat.isreg is defined and mysqld_bin.stat.isreg)
+
+- name: "Create MySQL Group"
+  become: yes
+  group: name=mysql
+         gid=10000
+
+- name: "Create MySQL User"
+  become: yes
+  user: name=mysql
+        uid=10000
+        group=mysql
+
+- name: "Check PATH (mysql/bin)"
+  shell: >
+    bash -lc 'echo $PATH | grep "/usr/local/mysql/bin"';
+  register: path_mysql_bin
+  ignore_errors: True
+
+- name: "Add PATH (/usr/local/mysql/bin)"
+  shell: >
+    echo 'export PATH=$PATH:/usr/local/mysql/bin' >> ~/.bash_profile;
+  when: path_mysql_bin.stdout == ""
+
+- name: "check initialized or not"
+  become: mysql
+  stat: path=/usr/local/mysql/data
+  register: mysql_data
+  
+- name: "Initialize MySQL"
+  become: yes
+  shell: >
+    export PATH=$PATH:/usr/local/mysql/bin;
+    mysqld --no-defaults --user=mysql --initialize --log-error-verbosity=3 > init.log;
+  args:
+    chdir: /usr/local/mysql
+    executable: /bin/bash
+  when: not (mysql_data.stat.isdir is defined and mysql_data.stat.isdir)
+
+- name: "Check MySQL init.d file" 
+  become: yes
+  stat: path=/etc/init.d/mysqld
+  register: initd_mysqld
+
+- name: "copy MySQL init.d file"
+  become: yes
+  shell: >
+    cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysqld;
+  when: not (initd_mysqld.stat.isreg is defined and initd_mysqld.stat.isreg)
+
+- name: "Check my.cnf"
+  stat: path=/etc/mysql/my.cnf
+  register: my_cnf
+
+- name: "Copy my.cnf"
+  become: yes
+  shell: >
+    cp -f {{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}/support-files/my-default.cnf /etc/mysql/my.cnf
+
+#- name: "Copy my.cnf"
+#  become: yes
+#  file: src={{ WORK_DIR }}/{{ MYSQL_WORK_DIR }}/support-files/my-default.cnf
+#        dest=/etc/mysql/my.cnf
+
+- name: "Check MySQL rc3.d file" 
+  stat: path=/etc/rc3.d/S50mysqld
+  register: rc3d_mysqld
+        
+- name: "Create symlink: MySQL init.d file"
+  become: yes
+  shell: >
+    update-rc.d -f mysqld defaults 50 50;
+  when: not (rc3d_mysqld.stat.islnk is defined and rc3d_mysqld.stat.islnk)
+        
+- name: "Launch MySQL server"
+  become: yes
+  service: name=mysqld
+           state=restarted
+

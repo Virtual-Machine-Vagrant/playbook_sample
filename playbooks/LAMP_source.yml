@@ -1,0 +1,26 @@
+- hosts: LAMP-server
+
+  roles:
+    - mysql5.7_source
+    - apach2_source
+
+  tasks:
+    - name: "APT: install favorite apps (APT-GET)"
+      become: yes
+      apt: pkg={{ item }} state=present
+      with_items:
+        - git
+        - unzip
+        - emacs
+      when: ansible_distribution == "Ubuntu" or
+            ansible_distribution == "Debian"
+
+    - name: "APT: install favorite apps (YUM)"
+      become: yes
+      yum: name={{ item }} state=present
+      with_items:
+        - git
+        - unzip
+        - emacs
+      when: ansible_distribution == "CentOS" or
+            ansible_distribution == "RedHat"

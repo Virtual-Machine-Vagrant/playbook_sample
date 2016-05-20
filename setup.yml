@@ -1,0 +1,4 @@
+# build by source
+- include: playbooks/LAMP_source.yml
+# use package manager
+#- include: playbooks/LAMP.yml
