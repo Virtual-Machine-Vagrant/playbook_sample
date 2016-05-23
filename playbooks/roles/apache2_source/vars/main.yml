@@ -1,0 +1,5 @@
+---
+APACHE_SRC_URL_BASE: "http://mirror.downloadvn.com/apache/httpd"
+APACHE_WORK_DIR: "httpd-2.4.20"
+APACHE_SRC_MD5: "e725c268624737a163dc844e28f720d1"
+APACHE_BASE_DIR: "/home/vagrant/build/apache2"

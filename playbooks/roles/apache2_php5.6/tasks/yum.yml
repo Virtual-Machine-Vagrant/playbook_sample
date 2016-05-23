@@ -1,0 +1,86 @@
+# For only Ansible 2.1
+#- name: "YUM: add EPEL repository"
+#  become: yes
+#  yum_repository:
+#    name: epel-release
+#    description: add EPEL release version repository
+
+- name: "YUM: add EPEL repository"
+  become: yes
+  yum: name="epel-release"
+       state=present
+    
+- name: "YUM: check REMI repository state"
+  stat: path=/etc/yum.repos.d/remi.repo
+  register: remi_repo
+  
+- name: "YUM: get_url REMI repository file"
+  become: yes
+  get_url: url=http://rpms.famillecollet.com/enterprise/remi.repo
+           dest=/etc/yum.repos.d/
+  when: not (remi_repo.stat.isreg is defined and remi_repo.stat.isreg)
+         
+- name: "YUM: install apache2 and PHP5.6"
+  become: yes
+  yum: name={{ item }}
+       enablerepo=remi,remi-php56,epel
+       state=present
+  with_items:
+    - httpd
+    - php
+    - php-common
+    - php-gd
+    - php-pecl-imagick
+    - php-intl
+    - php-mcrypt
+    - php-mysql
+    - php-soap
+    - php-xsl
+
+
+- name: "apache: modify httpd.conf (use site-{available|enable})"
+  become: yes
+  copy: src=template/httpd.conf.yum
+        dest=/etc/httpd/conf/httpd.conf
+        force=yes
+
+- name: "check dir (sites-available)"
+  stat: path=/etc/httpd/sites-available
+  register: sites_a
+
+- name: "create dir (sites-available)"
+  become: yes
+  file: path=/etc/httpd/sites-available
+        state=directory
+  when: not (sites_a.stat.isdir is defined and sites_a.stat.isdir)
+
+- name: "check dir (sites-enabled)"
+  stat: path=/etc/httpd/sites-enabled
+  register: sites_e
+
+- name: "create dir (sites-enabled)"
+  become: yes
+  file: path=/etc/httpd/sites-enabled
+        state=directory
+  when: not (sites_e.stat.isdir is defined and sites_e.stat.isdir)
+
+- name: "apache: put httpd.conf(sites-* enabled)"
+  become: yes
+  copy: src=template/httpd.conf.yum
+        dest=/etc/httpd/conf/httpd.conf
+
+- name: "apache: put virtualhost config to sites-available"
+  become: yes
+  copy: src=template/000-default.conf.yum
+        dest=/etc/httpd/sites-available/000-default.conf
+
+- name: "apache: create a symboliclink to sites-enabled"
+  become: yes
+  file: src=../sites-available/000-default.conf
+        dest=/etc/httpd/sites-enabled/000-default.conf
+        state=link
+
+- name: "apache: service restart"
+  become: yes
+  service: name=httpd state=restarted
+  ignore_errors: True
