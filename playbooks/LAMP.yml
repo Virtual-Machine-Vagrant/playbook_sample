@@ -2,7 +2,7 @@
 
   roles:
     - mysql5.6
-    - apach2_php5.6
+    - apache2_php5.6
     - php5.6_mysqlbinding
 
   - name: "APT: install required apps"

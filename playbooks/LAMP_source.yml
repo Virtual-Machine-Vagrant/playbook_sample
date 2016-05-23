@@ -2,7 +2,8 @@
 
   roles:
     - mysql5.7_source
-    - apach2_source
+    - apache2_source
+    - php5.6_source
 
   tasks:
     - name: "APT: install favorite apps (APT-GET)"

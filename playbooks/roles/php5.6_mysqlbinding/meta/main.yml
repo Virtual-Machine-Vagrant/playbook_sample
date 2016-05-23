@@ -1,4 +1,4 @@
 ---
 dependencies:
   - { role: mysql5.6 }
-  - { role: apach2_php5.6 }
+  - { role: apache2_php5.6 }
