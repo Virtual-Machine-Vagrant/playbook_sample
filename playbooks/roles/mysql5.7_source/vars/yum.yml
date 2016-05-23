@@ -1,5 +1,0 @@
----
-MYSQL56_CLIENT_RPM: "http://downloads.mysql.com/archives/get/file/MySQL-client-5.6.29-1.linux_glibc2.5.x86_64.rpm"
-MYSQL56_SERVER_RPM: "http://downloads.mysql.com/archives/get/file/MySQL-server-5.6.29-1.linux_glibc2.5.x86_64.rp"
-MYSQL56_SHARED_COMPAT_RPM: "http://downloads.mysql.com/archives/get/file/MySQL-shared-compat-5.6.29-1.linux_glibc2.5.x86_64.rpm"
-MYSQL56_DEVEL_RPM: "http://downloads.mysql.com/archives/get/file/MySQL-devel-5.6.29-1.linux_glibc2.5.x86_64.rpm"
